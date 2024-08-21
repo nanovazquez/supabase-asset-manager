@@ -23,6 +23,7 @@ export default [
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "max-len": ["error", { code: 120 }],
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ];
