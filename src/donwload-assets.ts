@@ -26,10 +26,6 @@ export default async function downloadAssets(answers: Answers): Promise<void> {
   );
 }
 
-function isFile(asset: any) {
-  return !!asset.id && !!asset.metadata?.mimetype;
-}
-
 async function downloadFilesRecursively(
   supabaseClient: SupabaseClient,
   bucketName: string,
@@ -40,24 +36,44 @@ async function downloadFilesRecursively(
   console.log(`Downloading files from ${folderName}`);
 
   for (const file of files) {
-    if (isFile(file)) {
-      await downloadFile(supabaseClient, bucketName, `${folderName}/${file.name}`, tempFolderPath);
-    } else {
-      const folder = await supabaseClient.storage.from(bucketName).list(`${folderName}/${file.name}`, { limit: 1000 });
+    const fileName = `${folderName}/${file.name}`;
+    const isFile = !!file.id && !!file.metadata?.mimetype;
 
-      if (!folder.data) {
-        return;
-      }
-
-      await downloadFilesRecursively(
-        supabaseClient,
-        bucketName,
-        `${folderName}/${file.name}`,
-        tempFolderPath,
-        folder.data,
-      );
+    if (isFile) {
+      await downloadFile(supabaseClient, bucketName, fileName, tempFolderPath);
+      continue;
     }
+
+    // If the file is a folder, download its content recursively
+    const files = await getAllFiles(supabaseClient, bucketName, fileName);
+    await downloadFilesRecursively(supabaseClient, bucketName, fileName, tempFolderPath, files);
   }
+}
+
+async function getAllFiles(
+  supabaseClient: SupabaseClient,
+  bucketName: string,
+  folderName: string,
+): Promise<FileObject[]> {
+  const toReturn: FileObject[] = [];
+  let downloadedFilesInThisIterationCount = 0;
+
+  do {
+    const { data, error } = await supabaseClient.storage.from(bucketName).list(folderName, { limit: 1000 });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      throw Error("No data found");
+    }
+
+    downloadedFilesInThisIterationCount = data.length;
+    toReturn.push(...data);
+  } while (downloadedFilesInThisIterationCount === 1000);
+
+  return toReturn;
 }
 
 async function downloadFile(

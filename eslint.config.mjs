@@ -22,7 +22,17 @@ export default [
     },
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
-      "max-len": ["error", { code: 120 }],
+      "max-len": [
+        "error",
+        {
+          code: 120,
+          ignoreUrls: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+          ignoreRegExpLiterals: true,
+          ignoreComments: true,
+        },
+      ],
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
